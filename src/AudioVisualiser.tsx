@@ -14,6 +14,7 @@ class AudioVisualiser extends Component {
   private renderer: THREE.WebGLRenderer;
   private animationID: number | null;
   private meshes: THREE.Mesh[];
+  private texture: THREE.Texture;
   constructor(props: any) {
     super(props);
     this.canvas = React.createRef();
@@ -22,21 +23,32 @@ class AudioVisualiser extends Component {
     this.renderer = new THREE.WebGLRenderer()
     this.animationID = null
     this.meshes = []
+    this.texture = new THREE.TextureLoader().load('./textures/black-wave-halftone.jpg')
+    this.texture.wrapS = THREE.RepeatWrapping
+    this.texture.wrapT = THREE.RepeatWrapping
+    this.texture.anisotropy = 2
+    //this.texture.repeat = new THREE.Vector2(1, 0.75)
   }
 
-  componentDidUpdate() {
-    this.draw();
+  componentDidUpdate () {
+    // @ts-ignore
+    this.draw(this.props.visualizerMode);
   }
 
-  componentDidMount() {
-    this.setup();
+  componentDidMount () {
+    // @ts-ignore
+    this.setup(this.props.visualizerMode)
   }
 
-  private setup() {
+  private setup (mode: number) {
     this.setupCanvas()
     this.setupCamera()
     this.setupLighting()
-    this.experiment1Setup()
+    if (mode === 1) {
+      this.experiment1Setup()
+    } else if (mode === 2) {
+      this.experiment2Setup()
+    }
   }
 
   private canvasResizeListener () {
@@ -50,7 +62,7 @@ class AudioVisualiser extends Component {
     })
   }
 
-  private setupCanvas() {
+  private setupCanvas () {
     this.renderer.setSize(window.innerWidth, window.innerHeight)
     this.renderer.setPixelRatio(window.devicePixelRatio)
     const canvas = this.canvas.current as any;
@@ -58,15 +70,15 @@ class AudioVisualiser extends Component {
     this.canvasResizeListener()
   }
 
-  private setupCamera() {
+  private setupCamera () {
     this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
     this.camera.aspect = window.innerWidth / window.innerHeight
 
-    this.camera.position.set(0, 0, 5)
+    this.camera.position.set(0, 0, 10)
     // this.camera.rotation.set(0, Math.PI / 4, 0)
   }
 
-  private setupLighting() {
+  private setupLighting () {
     const pointLight = new THREE.PointLight(0xffffff)
     const spotLight = new THREE.SpotLight(0xffffff)
 
@@ -108,13 +120,12 @@ class AudioVisualiser extends Component {
 
   private animate () {
     this.animationID = requestAnimationFrame(this.animate)
-    this.draw()
+    // @ts-ignore
+    this.draw(this.props.visualizerMode)
   }
 
-  private draw() {
+  private draw (mode: number) {
     this.renderer.render( this.scene, this.camera )
-    this.meshes[0].rotation.x += 0.01
-    this.meshes[0].rotation.y += 0.01
     // @ts-ignore
     const avFreq = this.props.averageFreq
     // @ts-ignore
@@ -130,14 +141,50 @@ class AudioVisualiser extends Component {
 
     //console.log(`bass: ${bass.average}`)
     //console.log(avFreq)
-
-    this.experiment1(bass, kick, snare, mids, highs)
+    if (mode === 1) {
+      this.experiment1(bass, kick, snare, mids, highs)
+    } else if (mode === 2) {
+      this.experiment2(bass, kick, snare, mids, highs)
+    }
   }
 
-  private experiment1(bass: AnalysisObject, kick: AnalysisObject, snare: AnalysisObject, mids: AnalysisObject, highs: AnalysisObject) {
+  private experiment2 (bass: AnalysisObject, kick: AnalysisObject, snare: AnalysisObject, mids: AnalysisObject, highs: AnalysisObject) {
+    // const xOffset = this.texture.offset.x
+    let yOffset = 0
+    if (this.texture.offset.y) {
+      yOffset = this.texture.offset.y
+    }
+    this.clearScene()
+    const newRadialSegments = (bass.average + snare.average) / 4
+    //console.log(newRadialSegments)
+    const newRadius = mids.energy / 10
+    const newTube = newRadius - (kick.average / 155)
+    const geometry = new THREE.TorusBufferGeometry(newRadius, newTube , newRadialSegments, 64)
+    this.texture.offset = new THREE.Vector2((mids.average / 100) % 1, (yOffset + (bass.average / 25500)) % 1)
+    const material = new THREE.MeshBasicMaterial({side: THREE.BackSide, color: 0xFFFFFF, map: this.texture })
+    const mesh = new THREE.Mesh(geometry, material)
+    mesh.rotation.set(-Math.PI / 3, 0, 0)
+    this.meshes[0] = mesh
+    this.scene.add(this.meshes[0])
+  }
+
+  private experiment2Setup () {
+    console.log('experiment 2 setup')
+    const geometry = new THREE.TorusBufferGeometry(20, 19, 30, 64)
+    const material = new THREE.MeshLambertMaterial({side: THREE.BackSide, color: 0xFFFFFF })
+    const mesh = new THREE.Mesh(geometry, material)
+    this.meshes.push(mesh)
+    this.scene.add(this.meshes[0])
+    console.log(this.texture)
+    console.log(mesh)
+  }
+
+  private experiment1 (bass: AnalysisObject, kick: AnalysisObject, snare: AnalysisObject, mids: AnalysisObject, highs: AnalysisObject) {
+    this.meshes[0].rotation.x += 0.01
+    this.meshes[0].rotation.y += 0.01
     if (bass && bass.average) {
       // change shape size
-      const scaleFactor = THREE.MathUtils.clamp((bass.average / 255) * 3, 0.5, 2)
+      const scaleFactor = THREE.MathUtils.clamp((bass.average / 85), 0.5, 1.5)
       const geometry = this.meshes[0].geometry as THREE.BoxBufferGeometry
       const position = geometry.attributes.position.array
       for (let i = 0; i < geometry.attributes.position.array.length; i++) {
@@ -166,7 +213,7 @@ class AudioVisualiser extends Component {
     }
   }
 
-  private experiment1Setup() {
+  private experiment1Setup () {
     const geometry = new THREE.BoxBufferGeometry(1, 1, 1)
     const material = new THREE.MeshLambertMaterial({ color: 0xFFFFFF })
     const mesh = new THREE.Mesh(geometry, material)
@@ -174,7 +221,17 @@ class AudioVisualiser extends Component {
     this.scene.add(this.meshes[0])
   }
 
-  render() {
+  private clearScene() {
+    for (let i = 0; i < this.meshes.length; i++) {
+      this.scene.remove(this.meshes[i])
+      this.meshes[i].geometry.dispose()
+      const material = this.meshes[i].material as THREE.Material
+      material.dispose()
+    }
+    this.meshes = []
+  }
+
+  render () {
     // @ts-ignore
     return <div ref={this.canvas} />;
   }
