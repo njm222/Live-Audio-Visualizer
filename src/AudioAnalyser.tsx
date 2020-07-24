@@ -1,7 +1,8 @@
 import React, {Component} from 'react';
 import AudioVisualiser from './AudioVisualiser';
 
-interface AnalysisObject {
+interface AnalysisSectionObject {
+  name: string
   deviation: number,
   average: number,
   energy: number,
@@ -18,21 +19,51 @@ class AudioAnalyser extends Component {
   private dataArray: Uint8Array | undefined;
   private source: MediaStreamAudioSourceNode | undefined;
   private rafId: number | undefined;
-  private bassObject: AnalysisObject
-  private kickObject: AnalysisObject;
-  private snareObject: AnalysisObject;
-  private midsObject: AnalysisObject;
-  private highsObject: AnalysisObject;
+  private bassObject: AnalysisSectionObject
+  private kickObject: AnalysisSectionObject;
+  private snareObject: AnalysisSectionObject;
+  private midsObject: AnalysisSectionObject;
+  private highsObject: AnalysisSectionObject;
   private avFreq: number;
   private rms: number;
   private peak: number;
   private bufferLength: number;
+
   constructor(props: any) {
     super(props);
     this.state = {
       audioData: new Uint8Array(0),
+      avFreq: 0,
+      peak: 0,
+      rms: 0,
+      bass: {
+        average: 0,
+        energy: 0,
+        deviation: 0
+      },
+      kick: {
+        average: 0,
+        energy: 0,
+        deviation: 0
+      },
+      snare: {
+        average: 0,
+        energy: 0,
+        deviation: 0
+      },
+      mids: {
+        average: 0,
+        energy: 0,
+        deviation: 0
+      },
+      highs: {
+        average: 0,
+        energy: 0,
+        deviation: 0
+      }
     };
     this.bassObject = {
+      name: 'bass',
       deviation: 0,
       average: 0,
       energy: 0,
@@ -43,6 +74,7 @@ class AudioAnalyser extends Component {
       upper: 4
     }
     this.kickObject = {
+      name: 'kick',
       deviation: 0,
       average: 0,
       energy: 0,
@@ -53,6 +85,7 @@ class AudioAnalyser extends Component {
       upper: 3
     }
     this.snareObject = {
+      name: 'snare',
       deviation: 0,
       average: 0,
       energy: 0,
@@ -63,6 +96,7 @@ class AudioAnalyser extends Component {
       upper: 4
     }
     this.midsObject = {
+      name: 'mids',
       deviation: 0,
       average: 0,
       energy: 0,
@@ -73,6 +107,7 @@ class AudioAnalyser extends Component {
       upper: 32
     }
     this.highsObject = {
+      name: 'highs',
       deviation: 0,
       average: 0,
       energy: 0,
@@ -160,25 +195,62 @@ class AudioAnalyser extends Component {
       }
       this.avFreq = this.avFreq / this.bufferLength
       this.rms = Math.sqrt(this.rms / this.bufferLength)
+      this.setState({
+        avFreq: this.avFreq,
+        peak: this.peak,
+        rms: this.rms
+      })
     }
   }
 
-  getFrequencySectionData (section: AnalysisObject) {
+  getFrequencySectionData (section: AnalysisSectionObject) {
+    // reset data
+    section.average = 0
+    section.deviation = 0
+
     if (this.dataArray) {
+      // Calculate section energy
       for (let i = section.lower; i < section.upper; i++) {
         section.energy += this.dataArray[i]
       }
       section.energy = section.energy / (section.upper - section.lower)
       section.array[section.arrayCounter++] = section.energy
+
+      // Calculate average and deviation
+      for (let i = 0; i < section.arrayLength; i++) {
+        section.average += section.array[i]
+        section.deviation += section.array[i] * section.array[i]
+      }
+      section.average = section.average / section.arrayLength
+      section.deviation = Math.sqrt(section.deviation / section.arrayLength - section.average * section.average)
+
+      // Reset arrayCounter
       if (section.arrayCounter >= section.arrayLength) {
         section.arrayCounter = 0
       }
+
+      const objectToSet = {
+        average: section.average,
+        energy: section.energy,
+        deviation: section.deviation
+      }
+      this.setState({
+        [section.name]: objectToSet
+      })
     }
   }
 
   render() {
-    // @ts-ignore
-    return <AudioVisualiser audioData={this.state.audioData} averageFreq={this.avFreq} />;
+    return <AudioVisualiser
+        // @ts-ignore
+        audioData={this.state.audioData}
+        // @ts-ignore
+        averageFreq={this.state.avFreq}
+        // @ts-ignore
+        bass={this.state.bass}
+        // @ts-ignore
+        snare={this.state.snare}
+    />;
   }
 }
 
