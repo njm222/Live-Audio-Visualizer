@@ -243,6 +243,8 @@ class AudioAnalyser extends Component {
   render() {
     return <AudioVisualiser
         // @ts-ignore
+        visualizerMode={this.props.mode}
+        // @ts-ignore
         audioData={this.state.audioData}
         // @ts-ignore
         averageFreq={this.state.avFreq}
