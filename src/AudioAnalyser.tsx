@@ -80,7 +80,7 @@ class AudioAnalyser extends Component {
       energy: 0,
       arrayCounter: 0,
       array: [],
-      arrayLength: 32,
+      arrayLength: 16,
       lower: 1,
       upper: 3
     }
@@ -91,7 +91,7 @@ class AudioAnalyser extends Component {
       energy: 0,
       arrayCounter: 0,
       array: [],
-      arrayLength: 32,
+      arrayLength: 16,
       lower: 2,
       upper: 4
     }
@@ -102,7 +102,7 @@ class AudioAnalyser extends Component {
       energy: 0,
       arrayCounter: 0,
       array: [],
-      arrayLength: 32,
+      arrayLength: 8,
       lower: 4,
       upper: 32
     }
@@ -113,7 +113,7 @@ class AudioAnalyser extends Component {
       energy: 0,
       arrayCounter: 0,
       array: [],
-      arrayLength: 32,
+      arrayLength: 8,
       lower: 32,
       upper: 128
     }
@@ -249,7 +249,13 @@ class AudioAnalyser extends Component {
         // @ts-ignore
         bass={this.state.bass}
         // @ts-ignore
+        kick={this.state.kick}
+        // @ts-ignore
         snare={this.state.snare}
+        // @ts-ignore
+        mids={this.state.mids}
+        // @ts-ignore
+        highs={this.state.highs}
     />;
   }
 }
