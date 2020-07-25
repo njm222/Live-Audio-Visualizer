@@ -17,17 +17,17 @@ class AudioVisualiser extends Component {
   private texture: THREE.Texture;
   constructor(props: any) {
     super(props);
+    this.texture = new THREE.TextureLoader().load('./textures/black-wave-halftone.jpg')
+    this.texture.wrapS = THREE.RepeatWrapping
+    this.texture.wrapT = THREE.RepeatWrapping
+    this.texture.anisotropy = 8
     this.canvas = React.createRef();
     this.scene = new THREE.Scene()
     this.camera = new THREE.PerspectiveCamera()
     this.renderer = new THREE.WebGLRenderer()
     this.animationID = null
     this.meshes = []
-    this.texture = new THREE.TextureLoader().load('./textures/black-wave-halftone.jpg')
-    this.texture.wrapS = THREE.RepeatWrapping
-    this.texture.wrapT = THREE.RepeatWrapping
-    this.texture.anisotropy = 2
-    //this.texture.repeat = new THREE.Vector2(1, 0.75)
+    // this.texture.repeat = new THREE.Vector2(1, 0.75)
   }
 
   componentDidUpdate () {
@@ -48,6 +48,8 @@ class AudioVisualiser extends Component {
       this.experiment1Setup()
     } else if (mode === 2) {
       this.experiment2Setup()
+    } else if (mode === 3) {
+      this.experiment3Setup()
     }
   }
 
@@ -74,7 +76,7 @@ class AudioVisualiser extends Component {
     this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
     this.camera.aspect = window.innerWidth / window.innerHeight
 
-    this.camera.position.set(0, 0, 10)
+    this.camera.position.set(0, 0, 15)
     // this.camera.rotation.set(0, Math.PI / 4, 0)
   }
 
@@ -145,8 +147,41 @@ class AudioVisualiser extends Component {
       this.experiment1(bass, kick, snare, mids, highs)
     } else if (mode === 2) {
       this.experiment2(bass, kick, snare, mids, highs)
+    } else if (mode === 3) {
+      this.experiment3(bass, kick, snare, mids, highs)
     }
   }
+
+  private experiment3 (bass: AnalysisObject, kick: AnalysisObject, snare: AnalysisObject, mids: AnalysisObject, highs: AnalysisObject) {
+    // const xOffset = this.texture.offset.x
+    let yOffset = 0
+    if (this.texture.offset.y) {
+      yOffset = this.texture.offset.y
+    }
+    let prevXRotation = 0
+    if (this.meshes[0]) {
+      prevXRotation = this.meshes[0].rotation.x
+    }
+    this.clearScene()
+    const newRadialSegments = (bass.average + snare.average) / 4
+    const newRadius = Math.max(mids.energy / 10, 20)
+    const newTube = Math.max(newRadius - (kick.average / 155), 3)
+    const geometry = new THREE.TorusBufferGeometry(newRadius, newTube , newRadialSegments, 64)
+    this.texture.offset = new THREE.Vector2(0, (yOffset + ((bass.average - 50) / 25500)) % 1)
+    const material = new THREE.MeshBasicMaterial({side: THREE.BackSide, color: 0xFFFFFF, map: this.texture })
+    const mesh = new THREE.Mesh(geometry, material)
+    if (kick.average) {
+      mesh.rotation.set((prevXRotation + ((kick.energy - 120) / 25500)) % (Math.PI * 2), 0, 0)
+    }
+    this.meshes[0] = mesh
+    this.scene.add(this.meshes[0])
+  }
+
+  private experiment3Setup () {
+    console.log('experiment 3 setup')
+    this.camera.position.set(0, -6, 18)
+  }
+
 
   private experiment2 (bass: AnalysisObject, kick: AnalysisObject, snare: AnalysisObject, mids: AnalysisObject, highs: AnalysisObject) {
     // const xOffset = this.texture.offset.x
@@ -154,16 +189,18 @@ class AudioVisualiser extends Component {
     if (this.texture.offset.y) {
       yOffset = this.texture.offset.y
     }
+    let xOffset = 0
+    if (this.texture.offset.x) {
+      xOffset = this.texture.offset.x
+    }
     this.clearScene()
-    const newRadialSegments = (bass.average + snare.average) / 4
-    //console.log(newRadialSegments)
-    const newRadius = mids.energy / 10
-    const newTube = newRadius - (kick.average / 155)
+    const newRadialSegments = (bass.average + snare.average) / 2
+    const newRadius = Math.max(mids.energy / 5, 20)
+    const newTube = newRadius - (kick.average / 200)
     const geometry = new THREE.TorusBufferGeometry(newRadius, newTube , newRadialSegments, 64)
-    this.texture.offset = new THREE.Vector2((mids.average / 100) % 1, (yOffset + (bass.average / 25500)) % 1)
+    this.texture.offset = new THREE.Vector2(xOffset + ((kick.energy - 50) / 25500), (yOffset + ((bass.average - 50) / 25500)) % 1)
     const material = new THREE.MeshBasicMaterial({side: THREE.BackSide, color: 0xFFFFFF, map: this.texture })
     const mesh = new THREE.Mesh(geometry, material)
-    mesh.rotation.set(-Math.PI / 3, 0, 0)
     this.meshes[0] = mesh
     this.scene.add(this.meshes[0])
   }

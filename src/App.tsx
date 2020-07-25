@@ -58,7 +58,7 @@ class App extends Component<IProps, IState> {
           </div>
           {
             // @ts-ignore
-            this.state.audio ? <AudioAnalyser audio={this.state.audio} mode={2} /> : ''
+            this.state.audio ? <AudioAnalyser audio={this.state.audio} mode={3} /> : ''
           }
         </div>
     );
